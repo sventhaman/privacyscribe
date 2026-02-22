@@ -14,6 +14,9 @@ import { useTheme } from '@/hooks/use-theme'
 import { useUIStore } from '@/store/ui-store'
 import { useMainWindowEventListeners } from '@/hooks/useMainWindowEventListeners'
 import { cn } from '@/lib/utils'
+import { NotesSidebar } from '@/components/notes/NotesSidebar'
+import { NoteEditor } from '@/components/notes/NoteEditor'
+import { NoteAssistant } from '@/components/notes/NoteAssistant'
 
 /**
  * Layout sizing configuration for resizable panels.
@@ -50,7 +53,9 @@ export function MainWindow() {
             maxSize={LAYOUT.leftSidebar.max}
             className={cn(!leftSidebarVisible && 'hidden')}
           >
-            <LeftSideBar />
+            <LeftSideBar>
+              <NotesSidebar />
+            </LeftSideBar>
           </ResizablePanel>
 
           <ResizableHandle className={cn(!leftSidebarVisible && 'hidden')} />
@@ -59,7 +64,9 @@ export function MainWindow() {
             defaultSize={MAIN_CONTENT_DEFAULT}
             minSize={LAYOUT.main.min}
           >
-            <MainWindowContent />
+            <MainWindowContent>
+              <NoteEditor />
+            </MainWindowContent>
           </ResizablePanel>
 
           <ResizableHandle className={cn(!rightSidebarVisible && 'hidden')} />
@@ -70,7 +77,9 @@ export function MainWindow() {
             maxSize={LAYOUT.rightSidebar.max}
             className={cn(!rightSidebarVisible && 'hidden')}
           >
-            <RightSideBar />
+            <RightSideBar>
+              <NoteAssistant />
+            </RightSideBar>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

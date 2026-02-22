@@ -24,7 +24,8 @@ pub fn run() {
     bindings::export_ts_bindings();
 
     // Build with common plugins
-    let mut app_builder = tauri::Builder::default();
+    let mut app_builder =
+        tauri::Builder::default().plugin(tauri_plugin_store::Builder::new().build());
 
     // Single instance plugin must be registered FIRST
     // When user tries to open a second instance, focus the existing window instead

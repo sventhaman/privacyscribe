@@ -1,5 +1,5 @@
 {
-  "app.name": "Tauri Template",
+  "app.name": "PrivacyScribe",
 
   "menu.about": "À propos de {{appName}}",
   "menu.checkForUpdates": "Vérifier les mises à jour...",

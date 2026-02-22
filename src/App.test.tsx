@@ -7,9 +7,9 @@ import App from './App'
 describe('App', () => {
   it('renders main window layout', () => {
     render(<App />)
-    expect(
-      screen.getByRole('heading', { name: /hello world/i })
-    ).toBeInTheDocument()
+    // The main layout renders the app name in the titlebar and sidebar
+    const appNameEls = screen.getAllByText(/PrivacyScribe/i)
+    expect(appNameEls.length).toBeGreaterThan(0)
   })
 
   it('renders title bar with traffic light buttons', () => {

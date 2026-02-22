@@ -16,7 +16,7 @@ import { useUIStore } from '@/store/ui-store'
 import { logger } from '@/lib/logger'
 import { notifications } from '@/lib/notifications'
 
-const APP_NAME = 'Tauri Template'
+const APP_NAME = 'PrivacyScribe'
 
 /**
  * Build and set the application menu with translated labels.
@@ -68,6 +68,21 @@ export async function buildAppMenu(): Promise<Menu> {
       ],
     })
 
+    // Build the Edit submenu (enables Cmd+C/V/X/A/Z on macOS)
+    const editSubmenu = await Submenu.new({
+      text: t('menu.edit'),
+      items: [
+        await PredefinedMenuItem.new({ item: 'Undo' }),
+        await PredefinedMenuItem.new({ item: 'Redo' }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+        await PredefinedMenuItem.new({ item: 'Cut' }),
+        await PredefinedMenuItem.new({ item: 'Copy' }),
+        await PredefinedMenuItem.new({ item: 'Paste' }),
+        await PredefinedMenuItem.new({ item: 'Separator' }),
+        await PredefinedMenuItem.new({ item: 'SelectAll' }),
+      ],
+    })
+
     // Build the View submenu
     const viewSubmenu = await Submenu.new({
       text: t('menu.view'),
@@ -89,7 +104,7 @@ export async function buildAppMenu(): Promise<Menu> {
 
     // Build the complete menu
     const menu = await Menu.new({
-      items: [appSubmenu, viewSubmenu],
+      items: [appSubmenu, editSubmenu, viewSubmenu],
     })
 
     // Set as the application menu
