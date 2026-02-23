@@ -46,6 +46,7 @@ export function NotesSidebar() {
   const notes = useNotesStore(state => state.notes)
   const selectedNoteId = useNotesStore(state => state.selectedNoteId)
   const searchQuery = useNotesStore(state => state.searchQuery)
+  const isLoading = useNotesStore(state => state.isLoading)
   const selectNote = useNotesStore(state => state.selectNote)
   const createNote = useNotesStore(state => state.createNote)
   const setSearchQuery = useNotesStore(state => state.setSearchQuery)
@@ -105,34 +106,40 @@ export function NotesSidebar() {
       {/* Note list */}
       <ScrollArea className="flex-1">
         <div className="pb-2">
-          {Object.entries(groups).map(([dateLabel, groupNotes]) => (
-            <div key={dateLabel}>
-              <div className="px-4 pb-1 pt-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {dateLabel}
-                </span>
-              </div>
-              {groupNotes.map(note => (
-                <button
-                  key={note.id}
-                  onClick={() => selectNote(note.id)}
-                  className={cn(
-                    'w-full px-4 py-2 text-start transition-colors hover:bg-accent/60',
-                    selectedNoteId === note.id && 'bg-accent'
-                  )}
-                >
-                  <div className="text-sm font-medium text-foreground">
-                    {note.title || t('notes.untitledNote')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatNoteTime(note.createdAt)}
-                  </div>
-                </button>
-              ))}
+          {isLoading && (
+            <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+              Loading…
             </div>
-          ))}
+          )}
+          {!isLoading &&
+            Object.entries(groups).map(([dateLabel, groupNotes]) => (
+              <div key={dateLabel}>
+                <div className="px-4 pb-1 pt-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {dateLabel}
+                  </span>
+                </div>
+                {groupNotes.map(note => (
+                  <button
+                    key={note.id}
+                    onClick={() => selectNote(note.id)}
+                    className={cn(
+                      'w-full px-4 py-2 text-start transition-colors hover:bg-accent/60',
+                      selectedNoteId === note.id && 'bg-accent'
+                    )}
+                  >
+                    <div className="text-sm font-medium text-foreground">
+                      {note.title || t('notes.untitledNote')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatNoteTime(note.createdAt)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))}
 
-          {filteredNotes.length === 0 && (
+          {!isLoading && filteredNotes.length === 0 && (
             <div className="px-4 py-6 text-center text-sm text-muted-foreground">
               {searchQuery ? t('notes.noSearchResults') : t('notes.noNotes')}
             </div>

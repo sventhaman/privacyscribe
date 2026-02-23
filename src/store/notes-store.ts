@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { getDb, type NoteRow } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export interface SoapNote {
   subjective: string
@@ -24,119 +26,222 @@ interface NotesState {
   selectedNoteId: string | null
   activeTab: NoteTab
   searchQuery: string
+  isLoading: boolean
 
+  loadNotes: () => Promise<void>
   selectNote: (id: string) => void
-  createNote: () => void
+  createNote: () => Promise<void>
   updateTitle: (id: string, title: string) => void
   updateSoap: (id: string, field: keyof SoapNote, value: string) => void
   updateTranscription: (id: string, value: string) => void
-  deleteNote: (id: string) => void
+  deleteNote: (id: string) => Promise<void>
   setActiveTab: (tab: NoteTab) => void
   setSearchQuery: (query: string) => void
 }
 
-const SAMPLE_NOTES: Note[] = [
-  {
-    id: '1',
-    title: 'Lower Back Pain Follow-up',
-    createdAt: new Date('2026-02-09T18:02:00'),
-    updatedAt: new Date('2026-02-09T18:02:00'),
-    transcription: '',
+function rowToNote(row: NoteRow): Note {
+  return {
+    id: row.id,
+    title: row.title,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+    transcription: row.transcription,
     soap: {
-      subjective:
-        'Patient reports persistent lower back pain for the past 3 weeks. Pain is 6/10, worse in the morning and after prolonged sitting. No radiation to legs. Denies bowel or bladder changes.',
-      objective:
-        'BP 128/82, HR 72 bpm, Temp 36.8°C. Lumbar spine: tenderness at L4–L5. ROM limited in flexion. Negative straight leg raise bilaterally. Neurological exam intact.',
-      assessment:
-        'Mechanical low back pain, likely musculoskeletal in origin. No red flags identified.',
-      plan: 'NSAIDs for pain management. Physical therapy referral. Follow up in 4 weeks or sooner if symptoms worsen. Patient educated on ergonomics and activity modification.',
+      subjective: row.subjective,
+      objective: row.objective,
+      assessment: row.assessment,
+      plan: row.plan,
     },
-  },
-  {
-    id: '2',
-    title: '',
-    createdAt: new Date('2026-01-21T10:04:00'),
-    updatedAt: new Date('2026-01-21T10:04:00'),
-    transcription: '',
-    soap: {
-      subjective: '',
-      objective: '',
-      assessment: '',
-      plan: '',
-    },
-  },
-  {
-    id: '3',
-    title: '',
-    createdAt: new Date('2026-01-15T21:11:00'),
-    updatedAt: new Date('2026-01-15T21:11:00'),
-    transcription: '',
-    soap: {
-      subjective: '',
-      objective: '',
-      assessment: '',
-      plan: '',
-    },
-  },
-  {
-    id: '4',
-    title: '',
-    createdAt: new Date('2026-01-13T20:31:00'),
-    updatedAt: new Date('2026-01-13T20:31:00'),
-    transcription: '',
-    soap: {
-      subjective: '',
-      objective: '',
-      assessment: '',
-      plan: '',
-    },
-  },
-]
+  }
+}
+
+/**
+ * Per-note debounce timers for background saves.
+ * Each note gets its own timer so rapid edits to one note
+ * don't cancel saves for another.
+ */
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+function scheduleSave(note: Note, delayMs = 500) {
+  const existing = saveTimers.get(note.id)
+  if (existing) clearTimeout(existing)
+
+  saveTimers.set(
+    note.id,
+    setTimeout(async () => {
+      saveTimers.delete(note.id)
+      try {
+        const db = await getDb()
+        await db.execute(
+          `UPDATE notes
+              SET title         = $1,
+                  subjective    = $2,
+                  objective     = $3,
+                  assessment    = $4,
+                  plan          = $5,
+                  transcription = $6,
+                  updated_at    = $7
+            WHERE id = $8`,
+          [
+            note.title,
+            note.soap.subjective,
+            note.soap.objective,
+            note.soap.assessment,
+            note.soap.plan,
+            note.transcription,
+            note.updatedAt.getTime(),
+            note.id,
+          ]
+        )
+        logger.debug(`Note ${note.id} saved to DB`)
+      } catch (err) {
+        logger.error('Failed to save note', { id: note.id, err })
+      }
+    }, delayMs)
+  )
+}
 
 export const useNotesStore = create<NotesState>()(
   devtools(
     set => ({
-      notes: SAMPLE_NOTES,
-      selectedNoteId: SAMPLE_NOTES[1]?.id ?? null,
+      notes: [],
+      selectedNoteId: null,
       activeTab: 'note',
       searchQuery: '',
+      isLoading: false,
+
+      loadNotes: async () => {
+        set({ isLoading: true }, undefined, 'loadNotes/start')
+        try {
+          const db = await getDb()
+          const rows = await db.select<NoteRow[]>(
+            'SELECT * FROM notes ORDER BY created_at DESC'
+          )
+          const notes = rows.map(rowToNote)
+          set(
+            {
+              notes,
+              selectedNoteId: notes[0]?.id ?? null,
+              isLoading: false,
+            },
+            undefined,
+            'loadNotes/done'
+          )
+        } catch (err) {
+          logger.error('Failed to load notes', { err })
+          set({ isLoading: false }, undefined, 'loadNotes/error')
+        }
+      },
 
       selectNote: (id: string) =>
         set({ selectedNoteId: id }, undefined, 'selectNote'),
 
-      createNote: () =>
-        set(
-          state => {
-            const newNote: Note = {
-              id: crypto.randomUUID(),
-              title: '',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              transcription: '',
-              soap: { subjective: '', objective: '', assessment: '', plan: '' },
-            }
-            return {
-              notes: [newNote, ...state.notes],
-              selectedNoteId: newNote.id,
-              activeTab: 'note',
-            }
-          },
-          undefined,
-          'createNote'
-        ),
+      createNote: async () => {
+        const id = crypto.randomUUID()
+        const now = Date.now()
 
-      updateTitle: (id: string, title: string) =>
+        try {
+          const db = await getDb()
+          await db.execute(
+            `INSERT INTO notes
+               (id, title, subjective, objective, assessment, plan, transcription, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [id, '', '', '', '', '', '', now, now]
+          )
+        } catch (err) {
+          logger.error('Failed to create note in DB', { err })
+          return
+        }
+
+        const newNote: Note = {
+          id,
+          title: '',
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+          transcription: '',
+          soap: { subjective: '', objective: '', assessment: '', plan: '' },
+        }
+
         set(
           state => ({
-            notes: state.notes.map(note =>
-              note.id === id ? { ...note, updatedAt: new Date(), title } : note
-            ),
+            notes: [newNote, ...state.notes],
+            selectedNoteId: newNote.id,
+            activeTab: 'note',
           }),
           undefined,
-          'updateTitle'
-        ),
+          'createNote'
+        )
+      },
 
-      deleteNote: (id: string) =>
+      updateTitle: (id: string, title: string) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id ? { ...note, updatedAt: new Date(), title } : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'updateTitle'
+        )
+      },
+
+      updateSoap: (id: string, field: keyof SoapNote, value: string) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id
+                ? {
+                    ...note,
+                    updatedAt: new Date(),
+                    soap: { ...note.soap, [field]: value },
+                  }
+                : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'updateSoap'
+        )
+      },
+
+      updateTranscription: (id: string, value: string) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id
+                ? { ...note, updatedAt: new Date(), transcription: value }
+                : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'updateTranscription'
+        )
+      },
+
+      deleteNote: async (id: string) => {
+        // Cancel any pending save for this note
+        const timer = saveTimers.get(id)
+        if (timer) {
+          clearTimeout(timer)
+          saveTimers.delete(id)
+        }
+
+        try {
+          const db = await getDb()
+          await db.execute('DELETE FROM notes WHERE id = $1', [id])
+        } catch (err) {
+          logger.error('Failed to delete note from DB', { id, err })
+          return
+        }
+
         set(
           state => {
             const index = state.notes.findIndex(n => n.id === id)
@@ -149,37 +254,8 @@ export const useNotesStore = create<NotesState>()(
           },
           undefined,
           'deleteNote'
-        ),
-
-      updateSoap: (id: string, field: keyof SoapNote, value: string) =>
-        set(
-          state => ({
-            notes: state.notes.map(note =>
-              note.id === id
-                ? {
-                    ...note,
-                    updatedAt: new Date(),
-                    soap: { ...note.soap, [field]: value },
-                  }
-                : note
-            ),
-          }),
-          undefined,
-          'updateSoap'
-        ),
-
-      updateTranscription: (id: string, value: string) =>
-        set(
-          state => ({
-            notes: state.notes.map(note =>
-              note.id === id
-                ? { ...note, updatedAt: new Date(), transcription: value }
-                : note
-            ),
-          }),
-          undefined,
-          'updateTranscription'
-        ),
+        )
+      },
 
       setActiveTab: (tab: NoteTab) =>
         set({ activeTab: tab }, undefined, 'setActiveTab'),

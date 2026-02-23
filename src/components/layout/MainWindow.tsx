@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -17,6 +18,9 @@ import { cn } from '@/lib/utils'
 import { NotesSidebar } from '@/components/notes/NotesSidebar'
 import { NoteEditor } from '@/components/notes/NoteEditor'
 import { NoteAssistant } from '@/components/notes/NoteAssistant'
+import { initDb } from '@/lib/db'
+import { useNotesStore } from '@/store/notes-store'
+import { logger } from '@/lib/logger'
 
 /**
  * Layout sizing configuration for resizable panels.
@@ -37,6 +41,14 @@ export function MainWindow() {
   const { theme } = useTheme()
   const leftSidebarVisible = useUIStore(state => state.leftSidebarVisible)
   const rightSidebarVisible = useUIStore(state => state.rightSidebarVisible)
+  const loadNotes = useNotesStore(state => state.loadNotes)
+
+  // Initialise DB schema then load notes on first mount
+  useEffect(() => {
+    initDb()
+      .then(() => loadNotes())
+      .catch(err => logger.error('DB init failed', { err }))
+  }, [loadNotes])
 
   // Set up global event listeners (keyboard shortcuts, etc.)
   useMainWindowEventListeners()
