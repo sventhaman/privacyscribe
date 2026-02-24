@@ -35,6 +35,16 @@ tauri-plugin-global-shortcut = "2"
 log = "0.4"
 regex = "1"
 
+# Audio recording
+cpal = "0.15"
+hound = "3.5"
+rubato = "0.16"
+
+# AI transcription (whisper.cpp via Rust bindings)
+reqwest = { version = "0.12", features = ["stream"] }
+futures-util = "0.3"
+tokio = { version = "1", features = ["fs"] }
+
 # Type-safe Tauri command bindings
 specta = { version = "=2.0.0-rc.22", features = ["derive", "serde_json"] }
 tauri-specta = { version = "=2.0.0-rc.21", features = ["typescript"] }
@@ -50,6 +60,10 @@ tauri-plugin-window-state = "2"
 # macOS-only: NSPanel for native panel behavior (fullscreen overlay, click-outside dismiss)
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
+whisper-rs = { version = "0.15", features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+whisper-rs = "0.15"
 
 # Optimize for smaller binary size in release builds
 [profile.release]

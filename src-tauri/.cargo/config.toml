@@ -1,0 +1,9 @@
+# Force the Rust linker to target macOS 13+ on both Apple Silicon and Intel.
+# This is required for whisper-rs Metal support: ggml-metal uses @available()
+# checks that emit the ___isPlatformVersionAtLeast symbol, which is only
+# resolvable when linking with a macOS 13 deployment target.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=13.0"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=13.0"]

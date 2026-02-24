@@ -52,7 +52,7 @@
     "copyright": "Copyright © 2025 Your Name. All rights reserved.",
     "macOS": {
       "frameworks": [],
-      "minimumSystemVersion": "10.15",
+      "minimumSystemVersion": "13.0",
       "signingIdentity": "-",
       "providerShortName": null,
       "entitlements": null,

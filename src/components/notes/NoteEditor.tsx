@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useNotesStore, type SoapNote, type NoteTab } from '@/store/notes-store'
 import { notifications } from '@/lib/notifications'
+import { AudioRecorder } from '@/components/notes/AudioRecorder'
 
 function formatHeaderDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
@@ -60,6 +61,12 @@ export function NoteEditor() {
   const updateTitle = useNotesStore(state => state.updateTitle)
   const updateSoap = useNotesStore(state => state.updateSoap)
   const updateTranscription = useNotesStore(state => state.updateTranscription)
+  const appendTranscription = (noteId: string, text: string) => {
+    const note = useNotesStore.getState().notes.find(n => n.id === noteId)
+    const existing = note?.transcription ?? ''
+    const separator = existing.trim() ? '\n\n' : ''
+    updateTranscription(noteId, existing + separator + text)
+  }
   const deleteNote = useNotesStore(state => state.deleteNote)
   const setActiveTab = useNotesStore(state => state.setActiveTab)
 
@@ -161,7 +168,12 @@ export function NoteEditor() {
       {/* Content area — single scroll context, textareas grow with content */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'transcription' ? (
-          <div className="px-6 pb-24 pt-5">
+          <div className="flex flex-col gap-4 px-6 pb-24 pt-5">
+            <AudioRecorder
+              onTranscriptionReady={text =>
+                appendTranscription(selectedNote.id, text)
+              }
+            />
             <TextareaAutosize
               value={selectedNote.transcription}
               onChange={e =>
