@@ -20,6 +20,7 @@ import { NoteEditor } from '@/components/notes/NoteEditor'
 import { NoteAssistant } from '@/components/notes/NoteAssistant'
 import { initDb } from '@/lib/db'
 import { useNotesStore } from '@/store/notes-store'
+import { useTemplatesStore } from '@/store/templates-store'
 import { logger } from '@/lib/logger'
 
 /**
@@ -42,13 +43,14 @@ export function MainWindow() {
   const leftSidebarVisible = useUIStore(state => state.leftSidebarVisible)
   const rightSidebarVisible = useUIStore(state => state.rightSidebarVisible)
   const loadNotes = useNotesStore(state => state.loadNotes)
+  const loadTemplates = useTemplatesStore(state => state.loadTemplates)
 
-  // Initialise DB schema then load notes on first mount
+  // Initialise DB schema then load notes and templates on first mount
   useEffect(() => {
     initDb()
-      .then(() => loadNotes())
+      .then(() => Promise.all([loadNotes(), loadTemplates()]))
       .catch(err => logger.error('DB init failed', { err }))
-  }, [loadNotes])
+  }, [loadNotes, loadTemplates])
 
   // Set up global event listeners (keyboard shortcuts, etc.)
   useMainWindowEventListeners()
