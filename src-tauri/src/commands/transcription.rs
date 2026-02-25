@@ -1,6 +1,6 @@
 //! Local Whisper transcription using whisper-rs (whisper.cpp bindings).
 //!
-//! Downloads the quantized whisper-small.en model on first use,
+//! Downloads the quantized whisper-large-v3-turbo model on first use,
 //! transcribes audio from a 16kHz mono WAV file, and **deletes the
 //! audio file immediately** after processing for HIPAA compliance.
 
@@ -9,27 +9,39 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
-const MODEL_FILENAME: &str = "ggml-small.en-q5_1.bin";
+const MODEL_FILENAME: &str = "ggml-large-v3-turbo-q5_0.bin";
 const MODEL_URL: &str =
-    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en-q5_1.bin";
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin";
 
 /// Transcribe a 16kHz mono WAV file and delete it immediately after.
+/// `language` is an optional ISO 639-1 code (e.g. "en", "no", "de").
+/// Pass `None` to auto-detect the language from the audio.
 /// Returns the transcribed text.
 #[tauri::command]
 #[specta::specta]
-pub async fn transcribe_and_delete(app: AppHandle, file_path: String) -> Result<String, String> {
+pub async fn transcribe_and_delete(
+    app: AppHandle,
+    file_path: String,
+    language: Option<String>,
+) -> Result<String, String> {
     let wav_path = PathBuf::from(&file_path);
 
     if !wav_path.exists() {
         return Err(format!("Audio file not found: {file_path}"));
     }
 
+    log::info!(
+        "Transcription request — language: {}",
+        language.as_deref().unwrap_or("auto")
+    );
+
     let model_path = ensure_model(&app).await?;
 
     // Run transcription on a blocking thread so we don't block the async runtime
-    let result = tokio::task::spawn_blocking(move || run_transcription(&model_path, &wav_path))
-        .await
-        .map_err(|e| format!("Transcription task panicked: {e}"))?;
+    let result =
+        tokio::task::spawn_blocking(move || run_transcription(&model_path, &wav_path, language))
+            .await
+            .map_err(|e| format!("Transcription task panicked: {e}"))?;
 
     // HIPAA: delete audio file regardless of transcription outcome
     if let Err(e) = std::fs::remove_file(&file_path) {
@@ -122,9 +134,11 @@ async fn ensure_model(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 /// Run whisper.cpp transcription on a 16kHz mono WAV file.
+/// `language` is an ISO 639-1 code or `None` for auto-detect.
 fn run_transcription(
     model_path: &std::path::Path,
     wav_path: &std::path::Path,
+    language: Option<String>,
 ) -> Result<String, String> {
     let mut reader =
         hound::WavReader::open(wav_path).map_err(|e| format!("Failed to open WAV: {e}"))?;
@@ -163,7 +177,7 @@ fn run_transcription(
         .map_err(|e| format!("Failed to create Whisper state: {e}"))?;
 
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some("en"));
+    params.set_language(language.as_deref());
     params.set_print_progress(false);
     params.set_print_realtime(false);
     params.set_print_timestamps(false);

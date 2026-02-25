@@ -3,10 +3,31 @@ import { Mic, Square, Loader2 } from 'lucide-react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { notifications } from '@/lib/notifications'
+import { WHISPER_LANGUAGES } from '@/lib/whisper-languages'
 import { useTranslation } from 'react-i18next'
 
 type RecorderState = 'idle' | 'recording' | 'transcribing'
+
+const LANGUAGE_STORAGE_KEY = 'privacyscribe-whisper-language'
+
+// 'auto' means pass null to Whisper → auto-detect from audio
+type WhisperLanguage = 'auto' | string
+
+function getStoredLanguage(): WhisperLanguage {
+  return localStorage.getItem(LANGUAGE_STORAGE_KEY) ?? 'auto'
+}
+
+function saveLanguage(lang: WhisperLanguage) {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, lang)
+}
 
 interface AudioRecorderProps {
   onTranscriptionReady: (text: string) => void
@@ -26,6 +47,7 @@ export function AudioRecorder({ onTranscriptionReady }: AudioRecorderProps) {
   const [state, setState] = useState<RecorderState>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [downloadPercent, setDownloadPercent] = useState<number | null>(null)
+  const [language, setLanguage] = useState<WhisperLanguage>(getStoredLanguage)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -46,6 +68,11 @@ export function AudioRecorder({ onTranscriptionReady }: AudioRecorderProps) {
     }
   }, [])
 
+  function handleLanguageChange(value: WhisperLanguage) {
+    setLanguage(value)
+    saveLanguage(value)
+  }
+
   async function handleRecord() {
     if (state === 'recording') {
       // Stop recording
@@ -62,6 +89,7 @@ export function AudioRecorder({ onTranscriptionReady }: AudioRecorderProps) {
 
         const text = await invoke<string>('transcribe_and_delete', {
           filePath,
+          language: language === 'auto' ? null : language,
         })
 
         if (text.trim()) {
@@ -107,7 +135,7 @@ export function AudioRecorder({ onTranscriptionReady }: AudioRecorderProps) {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <Button
         variant={state === 'recording' ? 'destructive' : 'outline'}
         size="sm"
@@ -126,6 +154,25 @@ export function AudioRecorder({ onTranscriptionReady }: AudioRecorderProps) {
           </>
         )}
       </Button>
+
+      {state === 'idle' && (
+        <Select value={language} onValueChange={handleLanguageChange}>
+          <SelectTrigger size="sm" className="w-32 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="max-h-64">
+            <SelectItem value="auto" className="text-xs font-medium">
+              {t('notes.recording.languageAuto')} (Auto)
+            </SelectItem>
+            {WHISPER_LANGUAGES.map(lang => (
+              <SelectItem key={lang.code} value={lang.code} className="text-xs">
+                {lang.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
       {state === 'recording' && (
         <>
           <span className="text-destructive font-mono text-sm tabular-nums">

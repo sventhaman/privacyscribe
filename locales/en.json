@@ -18,9 +18,11 @@
 
   "notes.transcription.placeholder": "Transcription will appear here...",
 
+  "notes.recording.language": "Language",
+  "notes.recording.languageAuto": "Auto",
   "notes.recording.start": "Record",
   "notes.recording.stop": "Stop",
-  "notes.recording.transcribing": "Transcribing (Local Native Engine)...",
+  "notes.recording.transcribing": "Transcribing…",
   "notes.recording.downloadingModel": "Downloading AI model ({{percent}}%)...",
   "notes.recording.noMicError": "Microphone access was denied. Please grant permission in System Settings.",
   "notes.recording.savedToast": "Transcription complete",
