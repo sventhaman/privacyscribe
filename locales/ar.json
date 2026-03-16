@@ -117,5 +117,7 @@
   "llm.modelDownloadButton": "تحميل",
   "llm.errorParsing": "فشل إنشاء الملاحظة — يرجى المحاولة مرة أخرى.",
   "llm.errorGenerating": "فشل إنشاء الملاحظة",
-  "llm.alreadyGenerating": "إنشاء الملاحظة قيد التقدم بالفعل"
+  "llm.alreadyGenerating": "إنشاء الملاحظة قيد التقدم بالفعل",
+  "llm.generatingProgress": "جارٍ إنشاء الملاحظة · {{count}} رمزًا",
+  "llm.timeout": "انتهت مهلة الإنشاء بعد دقيقتين. جرّب نصًا أقصر."
 }

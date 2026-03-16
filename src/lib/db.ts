@@ -136,18 +136,10 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
         - Example:
             1. Cough: [Content about cough]
             2. Knee_Pain: [Content about knee pain]
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
-- Document in order: vitals first (on one line), then exam findings, then test results.
-- Use medical terminology. Include both positive and negative findings.
-- List with new lines but not with bullets or hyphens.
-- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
-- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
-- Test format: \`Test: Result\` — only results explicitly mentioned.
-- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
-- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
+- Write ONLY findings explicitly stated aloud in the transcript, using medical terminology and standard units.
+- Never list what was NOT found. Never write "not mentioned", "not assessed", or "none".
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -156,7 +148,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Minor implied assessments are omitted - document only explicit, clinically significant statements from the transcript.
 - When "Subjective" section is grouped into numbered paragraph, keep this grouping in this section as well.
 - Only create numbered entries for problems that actually have an assessment. Do not create an entry for a problem from \`Subjective\` if there is no assessment for it.
-- Write ONE SINGLE whitespace with no quotes around if no relevant assessments.
 
 ## Plan
 - Format as a bulleted list with hyphens.
@@ -170,8 +161,7 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
   -> Follow-up (e.g., "- Follow-up in 2 weeks", "- Recontact upon worsening")
 - Combine ALL items within each category on ONE line, separated by commas.
 - When "Subjective" section is grouped into numbered paragraph, keep this grouping in this section as well.
-- When grouped, still format as bulleted list with hyphens within each group.
-- Write ONE SINGLE whitespace with no quotes around if no relevant information.`,
+- When grouped, still format as bulleted list with hyphens within each group.`,
   },
   {
     id: 'system-soap-short',
@@ -187,18 +177,10 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
         - Example:
             1. Cough: [Content]
             2. Knee_Pain: [Content]
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
-- Document in order: vitals first (on one line), then exam findings, then test results.
-- Use medical terminology. Include both positive and negative findings.
-- List with new lines but not with bullets or hyphens.
-- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
-- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
-- Test format: \`Test: Result\` — only results explicitly mentioned.
-- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
-- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
+- Write ONLY findings explicitly stated aloud in the transcript, using medical terminology and standard units.
+- Never list what was NOT found. Never write "not mentioned", "not assessed", or "none".
 
 ## Assessment
 - Maximum 1-2 short lines per problem. State diagnosis/differential only — no reasoning, no repetition from earlier sections.
@@ -206,7 +188,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Do not add your own interpretations or assumptions beyond what's stated in the transcript.
 - Minor implied assessments are omitted — document only explicit, clinically significant statements.
 - When "Subjective" section is grouped into numbered paragraphs, keep this grouping. Only create numbered entries for problems that actually have an assessment.
-- Write ONE SINGLE whitespace with no quotes around if no relevant assessments.
 
 ## Plan
 - Format as a bulleted list with hyphens.
@@ -215,8 +196,7 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
   Treatments -> Diagnostics -> Prescriptions -> Patient education -> Referrals -> Follow-up
 - Combine ALL items within each category on ONE line, separated by commas.
 - Keep each line as short as possible. Omit obvious/implied details.
-- When "Subjective" section is grouped into numbered paragraphs, keep this grouping. Still format as bulleted list with hyphens within each group.
-- Write ONE SINGLE whitespace with no quotes around if no relevant information.`,
+- When "Subjective" section is grouped into numbered paragraphs, keep this grouping. Still format as bulleted list with hyphens within each group.`,
   },
   {
     id: 'system-soap-background',
@@ -226,7 +206,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Include chronic conditions diagnosed pre-current illness, past medical/surgical history unrelated to current episode, ongoing medications for other conditions, relevant allergies, significant family/social history.
 - Exclude information related to the current problem or episode of care.
 - Format as a single paragraph with brief statements, using proper medical terms and abbreviations.
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant background information.
 
 ## Subjective
 - Include chief complaint, condensed history of present illness (documenting only clinically necessary information), and relevant positive and negative findings from the review of systems (ROS).
@@ -239,19 +218,11 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
             1. Cough: [Content about cough]
             2. Knee_Pain: [Content about knee pain]
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
-- Document in order: vitals first (on one line), then exam findings, then test results.
-- Use medical terminology. Include both positive and negative findings.
-- List with new lines but not with bullets or hyphens.
-- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
-- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
-- Test format: \`Test: Result\` — only results explicitly mentioned.
-- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
+- Write ONLY findings explicitly stated aloud in the transcript, using medical terminology and standard units.
+- Never list what was NOT found. Never write "not mentioned", "not assessed", or "none".
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -261,7 +232,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - When "Subjective" section is grouped into numbered paragraph, keep this grouping in this section as well.
 - Only create numbered entries for problems that actually have an assessment. Do not create an entry for a problem from \`Subjective\` if there is no assessment for it.
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no relevant assessments.
 
 ## Plan
 - Format as a bulleted list with hyphens.
@@ -276,8 +246,7 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Combine ALL items within each category on ONE line, separated by commas.
 - When "Subjective" section is grouped into numbered paragraph, keep this grouping in this section as well.
 - When grouped, still format as bulleted list with hyphens within each group.
-- NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no relevant information.`,
+- NEVER use bold markdown (**...**) formatting.`,
   },
   {
     id: 'system-soap-psychiatry',
@@ -289,7 +258,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Exclude information related to the current problem or episode of care — that belongs in Subjective.
 - Format as a single paragraph with brief telegraphic statements using proper medical terms and abbreviations.
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant background information.
 
 ## Subjective
 - Include chief complaint, symptom progression (onset, triggers, duration, severity, frequency), and impact on daily function (sleep, appetite, energy, relationships, work).
@@ -305,23 +273,12 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
             1. Anxiety: [Content about anxiety]
             2. Knee_Pain: [Content about knee pain]
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- Include ONLY vital signs, physical examination findings, paraclinical test results, and mental status examination that were explicitly stated in the transcript during THIS consultation.
-- Document in order: vitals first (one line), then mental status exam paragraph, then screening tool results, then other exam findings.
-- Use medical terminology. Include both positive and negative findings.
-- List with new lines but not with bullets or hyphens.
-- Only include mental status domains that were explicitly assessed or described in the transcript.
-- Format:
-    - Vitals: list only the parameters actually stated, using standard units (mmHg, /min, °C, %). Only include what was explicitly measured and spoken.
-    - Mental status: \`Mental Status: [flowing paragraph]\`
-    - Screening tools: \`[Tool]: [Score] — [interpretation if stated]\`
-    - Exams: \`System: Description\`
-    - Paraclinical test results from the current visit: \`Test: Result\`
-- ⛔ DO NOT copy standard phrases or invent typical values. Write ONLY what was explicitly said in the transcript.
+- Write ONLY findings explicitly stated aloud in the transcript, using medical terminology and standard units.
+- If a mental status exam was described, write it as a flowing paragraph. If screening tools were scored, include them.
+- Never list what was NOT found. Never write "not mentioned", "not assessed", or "none".
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -334,7 +291,6 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - When "Subjective" section is grouped into numbered paragraphs, keep this grouping in this section as well.
 - Only create numbered entries for problems that actually have an assessment. Do not create an entry for a problem from \`Subjective\` if there is no assessment for it.
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no relevant assessments.
 
 ## Plan
 - Format as a bulleted list with hyphens.
@@ -350,8 +306,7 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Combine ALL items within each category on ONE line, separated by commas.
 - When "Subjective" section is grouped into numbered paragraphs, keep this grouping in this section as well.
 - When grouped, still format as bulleted list with hyphens within each group.
-- NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no relevant information.`,
+- NEVER use bold markdown (**...**) formatting.`,
   },
 ]
 

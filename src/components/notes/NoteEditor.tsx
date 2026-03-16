@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Trash2,
@@ -42,11 +42,68 @@ function formatHeaderTime(date: Date): string {
   })
 }
 
+/**
+ * Extracts section title/content pairs from a partial JSON buffer.
+ * Handles both completed sections and the in-progress section being generated.
+ *
+ * The LLM outputs: {"title":"...","sections":[{"title":"S","content":"C"},…]}
+ * We match completed "title":"X","content":"Y" pairs inside the sections array,
+ * plus the trailing incomplete content of the section currently being generated.
+ */
+function extractStreamingSections(
+  json: string
+): { title: string; content: string }[] {
+  const sections: { title: string; content: string }[] = []
+
+  // Find the start of the sections array to avoid matching the root "title" key
+  const sectionsStart = json.indexOf('"sections"')
+  if (sectionsStart === -1) return sections
+  const searchArea = json.slice(sectionsStart)
+
+  // Match completed section objects: "title":"X","content":"Y"
+  const completedRe =
+    /"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/g
+  let match: RegExpExecArray | null
+  let lastMatchEnd = 0
+
+  while ((match = completedRe.exec(searchArea)) !== null) {
+    sections.push({
+      title: unescapeJson(match[1] ?? ''),
+      content: unescapeJson(match[2] ?? ''),
+    })
+    lastMatchEnd = match.index + match[0].length
+  }
+
+  // Look for an in-progress section: "title":"X","content":"<partial content without closing quote>
+  const remaining = searchArea.slice(lastMatchEnd)
+  const inProgressRe =
+    /"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)$/
+  const ipMatch = inProgressRe.exec(remaining)
+  if (ipMatch) {
+    sections.push({
+      title: unescapeJson(ipMatch[1] ?? ''),
+      content: unescapeJson(ipMatch[2] ?? ''),
+    })
+  }
+
+  return sections
+}
+
+/** Unescape JSON string escape sequences for display */
+function unescapeJson(s: string): string {
+  return s
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+}
+
 interface SoapSectionProps {
   label: string
   value: string
-  onChange: (value: string) => void
+  onChange?: (value: string) => void
   placeholder?: string
+  readOnly?: boolean
 }
 
 function SoapSection({
@@ -54,6 +111,7 @@ function SoapSection({
   value,
   onChange,
   placeholder,
+  readOnly,
 }: SoapSectionProps) {
   return (
     <div className="border-b border-border/50 last:border-b-0">
@@ -61,8 +119,9 @@ function SoapSection({
         <h3 className="mb-2 text-sm font-semibold text-foreground">{label}</h3>
         <TextareaAutosize
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder}
+          readOnly={readOnly}
           minRows={3}
           className="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
         />
@@ -94,6 +153,14 @@ export function NoteEditor() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadPercent, setDownloadPercent] = useState(0)
+  const [streamingSections, setStreamingSections] = useState<
+    { title: string; content: string }[]
+  >([])
+  // Buffer + counter refs for throttled streaming updates
+  const streamBufferRef = useRef('')
+  const tokenCountRef = useRef(0)
+  // Tracks which note started generation — prevents stale writes if user switches notes
+  const generationNoteIdRef = useRef<string | null>(null)
 
   const selectedNote = notes.find(n => n.id === selectedNoteId)
 
@@ -187,34 +254,64 @@ export function NoteEditor() {
     }
 
     // Generate the note
+    const noteIdAtStart = selectedNote.id
+    generationNoteIdRef.current = noteIdAtStart
+    streamBufferRef.current = ''
+    tokenCountRef.current = 0
+    setStreamingSections([])
     setIsGenerating(true)
+
+    // Switch to note tab so the user sees sections streaming in
+    const { setActiveTab: switchTab } = useNotesStore.getState()
+    switchTab('note')
+
     try {
-      const output = await generateNote(selectedNote, template)
+      const output = await generateNote(selectedNote, template, token => {
+        streamBufferRef.current += token
+        tokenCountRef.current++
+        // Update visible sections every 3 tokens to throttle re-renders
+        if (tokenCountRef.current % 3 === 0) {
+          setStreamingSections(
+            extractStreamingSections(streamBufferRef.current)
+          )
+        }
+      })
 
-      // Write output sections to the note
-      const { setSections, updateTitle: setTitle } = useNotesStore.getState()
-      setSections(
-        selectedNote.id,
-        output.sections.map(s => ({
-          title: s.title,
-          content: s.content,
-        }))
-      )
+      // Final parse to catch any remaining content
+      setStreamingSections([])
 
-      // Auto-set title if empty
-      if (!selectedNote.title.trim() && output.title) {
-        setTitle(selectedNote.id, output.title)
+      // Guard: only apply result if the user hasn't switched to a different note
+      if (generationNoteIdRef.current === noteIdAtStart) {
+        const { setSections, updateTitle: setTitle } = useNotesStore.getState()
+
+        // Merge generated sections with template sections (case-insensitive).
+        // Missing sections appear as empty/editable; order follows the template.
+        const mergedSections = template.sections.map(ts => {
+          const generated = output.sections.find(
+            s => s.title.toLowerCase() === ts.title.toLowerCase()
+          )
+          return { title: ts.title, content: generated?.content ?? '' }
+        })
+        setSections(noteIdAtStart, mergedSections)
+
+        if (!selectedNote.title.trim() && output.title) {
+          setTitle(noteIdAtStart, output.title)
+        }
       }
-
-      // Switch to note tab to show the result
-      const { setActiveTab: switchTab } = useNotesStore.getState()
-      switchTab('note')
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t('llm.errorGenerating')
+        err instanceof Error && err.message === 'llm_timeout'
+          ? t('llm.timeout')
+          : err instanceof Error
+            ? err.message
+            : t('llm.errorGenerating')
       notifications.error(message)
     } finally {
       setIsGenerating(false)
+      setStreamingSections([])
+      streamBufferRef.current = ''
+      tokenCountRef.current = 0
+      generationNoteIdRef.current = null
     }
   }
 
@@ -351,18 +448,42 @@ export function NoteEditor() {
           </div>
         ) : (
           <div className="pb-24">
-            {selectedNote.sections.length > 0
-              ? selectedNote.sections.map(s => (
-                  <SoapSection
-                    key={s.title}
-                    label={s.title}
-                    value={s.content}
-                    onChange={val => handleSectionChange(s.title, val)}
-                  />
-                ))
-              : (
-                  ['Subjective', 'Objective', 'Assessment', 'Plan'] as const
-                ).map(field => (
+            {isGenerating ? (
+              <>
+                {streamingSections.length > 0 ? (
+                  streamingSections.map(s => (
+                    <SoapSection
+                      key={s.title}
+                      label={s.title}
+                      value={s.content}
+                      readOnly
+                    />
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    <span className="text-sm">{t('llm.generating')}</span>
+                  </div>
+                )}
+                {streamingSections.length > 0 && (
+                  <div className="flex items-center gap-2 px-6 py-4 text-muted-foreground">
+                    <Loader2 className="size-3 animate-spin" />
+                    <span className="text-xs">{t('llm.generating')}</span>
+                  </div>
+                )}
+              </>
+            ) : selectedNote.sections.length > 0 ? (
+              selectedNote.sections.map(s => (
+                <SoapSection
+                  key={s.title}
+                  label={s.title}
+                  value={s.content}
+                  onChange={val => handleSectionChange(s.title, val)}
+                />
+              ))
+            ) : (
+              (['Subjective', 'Objective', 'Assessment', 'Plan'] as const).map(
+                field => (
                   <SoapSection
                     key={field}
                     label={t(
@@ -381,7 +502,9 @@ export function NoteEditor() {
                       `notes.soap.${field.toLowerCase() as 'subjective' | 'objective' | 'assessment' | 'plan'}Placeholder`
                     )}
                   />
-                ))}
+                )
+              )
+            )}
           </div>
         )}
       </div>

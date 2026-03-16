@@ -117,5 +117,7 @@
   "llm.modelDownloadButton": "Télécharger",
   "llm.errorParsing": "Échec de la génération — veuillez réessayer.",
   "llm.errorGenerating": "Échec de la génération de la note",
-  "llm.alreadyGenerating": "La génération de la note est déjà en cours"
+  "llm.alreadyGenerating": "La génération de la note est déjà en cours",
+  "llm.generatingProgress": "Génération en cours · {{count}} jetons",
+  "llm.timeout": "Délai dépassé après 2 minutes. Essayez une transcription plus courte."
 }

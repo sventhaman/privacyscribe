@@ -5,13 +5,19 @@ import type { LLMNoteOutput } from '@/types/llm'
 import type { Note } from '@/store/notes-store'
 import type { Template } from '@/types/templates'
 
+// 2 minutes — conservative for 8B on consumer hardware
+const GENERATION_TIMEOUT_MS = 120_000
+
 /**
  * Generate a structured clinical note using the local LLM.
  *
  * Streams tokens via Tauri events and returns the parsed JSON output
- * once generation is complete. All listeners are properly cleaned up.
+ * once generation is complete. All three listeners are registered before
+ * generation starts (via Promise.all) to eliminate the race window where
+ * early events could arrive before listeners are active.
  *
  * @throws Error with 'MODEL_NOT_FOUND' if the model hasn't been downloaded
+ * @throws Error with 'llm_timeout' if generation exceeds 2 minutes
  * @throws Error if generation fails or JSON output is invalid
  */
 export async function generateNote(
@@ -27,65 +33,72 @@ export async function generateNote(
   // 2. Build system + user prompts from template and transcript
   const { system, user } = buildLLMPrompt(note.transcription, template)
 
-  // 3. Set up event listeners before starting generation
   const tokenBuffer: string[] = []
+  let unlistenFns: (() => void)[] = []
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
 
-  const unlistenChunk = await listen<string>('llm-chunk', e => {
-    tokenBuffer.push(e.payload)
-    onToken?.(e.payload)
+  // Capture resolve/reject so listeners (registered outside the Promise) can
+  // settle the promise. TypeScript non-null assertion is safe — the Promise
+  // constructor runs synchronously, so both are assigned before Promise.all.
+  let resolve!: (value: LLMNoteOutput) => void
+  let reject!: (reason: Error) => void
+  const promise = new Promise<LLMNoteOutput>((res, rej) => {
+    resolve = res
+    reject = rej
   })
 
-  let unlistenDone: (() => void) | undefined
-  let unlistenError: (() => void) | undefined
-
-  try {
-    const output = await new Promise<LLMNoteOutput>((resolve, reject) => {
-      // Listen for completion
-      listen<undefined>('llm-done', () => {
-        try {
-          const json = tokenBuffer.join('')
-          const parsed: unknown = JSON.parse(json)
-
-          // Validate shape matches LLMNoteOutput
-          if (
-            !parsed ||
-            typeof parsed !== 'object' ||
-            !('title' in parsed) ||
-            !('sections' in parsed) ||
-            !Array.isArray((parsed as LLMNoteOutput).sections)
-          ) {
-            reject(new Error('Invalid LLM output shape'))
-            return
-          }
-
-          resolve(parsed as LLMNoteOutput)
-        } catch {
-          reject(new Error('Failed to parse LLM JSON output'))
-        }
-      }).then(fn => {
-        unlistenDone = fn
-      })
-
-      // Listen for errors
-      listen<string>('llm-error', e => {
-        reject(new Error(e.payload))
-      }).then(fn => {
-        unlistenError = fn
-      })
-
-      // Start generation — the Rust side will emit events
-      commands.generateNoteStream(system, user).then(result => {
-        if (result.status === 'error') {
-          reject(new Error(result.error))
-        }
-      })
-    })
-
-    return output
-  } finally {
-    // Always clean up all listeners to prevent leaks
-    unlistenChunk()
-    unlistenDone?.()
-    unlistenError?.()
+  const cleanup = () => {
+    if (timeoutId) clearTimeout(timeoutId)
+    unlistenFns.forEach(fn => fn())
+    unlistenFns = []
   }
+
+  // 3. Register ALL listeners before starting generation (eliminates race window)
+  const [ul1, ul2, ul3] = await Promise.all([
+    listen<string>('llm-chunk', e => {
+      tokenBuffer.push(e.payload)
+      onToken?.(e.payload)
+    }),
+    listen<undefined>('llm-done', () => {
+      cleanup()
+      try {
+        const json = tokenBuffer.join('')
+        const parsed: unknown = JSON.parse(json)
+        if (
+          !parsed ||
+          typeof parsed !== 'object' ||
+          !('title' in parsed) ||
+          !('sections' in parsed) ||
+          !Array.isArray((parsed as LLMNoteOutput).sections)
+        ) {
+          reject(new Error('Invalid LLM output shape'))
+          return
+        }
+        resolve(parsed as LLMNoteOutput)
+      } catch {
+        reject(new Error('Failed to parse LLM JSON output'))
+      }
+    }),
+    listen<string>('llm-error', e => {
+      cleanup()
+      reject(new Error(e.payload))
+    }),
+  ])
+  unlistenFns = [ul1, ul2, ul3]
+
+  // 4. Timeout starts after listeners are confirmed active
+  timeoutId = setTimeout(() => {
+    cleanup()
+    reject(new Error('llm_timeout'))
+  }, GENERATION_TIMEOUT_MS)
+
+  // 5. Start generation — Rust side will emit events our listeners are ready for
+  commands.generateNoteStream(system, user).then(result => {
+    if (result.status === 'error') {
+      cleanup()
+      reject(new Error(result.error))
+    }
+  })
+
+  return promise
 }

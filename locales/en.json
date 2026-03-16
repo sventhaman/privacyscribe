@@ -199,5 +199,7 @@
   "llm.modelDownloadButton": "Download",
   "llm.errorParsing": "Failed to generate note — please try again.",
   "llm.errorGenerating": "Note generation failed",
-  "llm.alreadyGenerating": "Note generation is already in progress"
+  "llm.alreadyGenerating": "Note generation is already in progress",
+  "llm.generatingProgress": "Generating note · {{count}} tokens",
+  "llm.timeout": "Generation timed out after 2 minutes. Try a shorter transcript."
 }
