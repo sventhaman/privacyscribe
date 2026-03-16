@@ -50,13 +50,14 @@ useState (local) → Zustand (shared UI) → TanStack Query (persisted/server)
 
 ### Zustand Stores
 
-| Store | What it holds |
-|-------|--------------|
-| `useUIStore` | Left/right sidebar visibility, command palette open, preferences open |
-| `useNotesStore` | Notes list, selected note ID, active tab, search query, debounced DB saves |
-| `useTemplatesStore` | Templates list, selected template, debounced DB saves |
+| Store               | What it holds                                                              |
+| ------------------- | -------------------------------------------------------------------------- |
+| `useUIStore`        | Left/right sidebar visibility, command palette open, preferences open      |
+| `useNotesStore`     | Notes list, selected note ID, active tab, search query, debounced DB saves |
+| `useTemplatesStore` | Templates list, selected template, debounced DB saves                      |
 
 **CRITICAL — selector pattern:**
+
 ```typescript
 // ✅ Selector — re-renders only when this value changes
 const visible = useUIStore(state => state.leftSidebarVisible)
@@ -66,6 +67,7 @@ const { leftSidebarVisible } = useUIStore()
 ```
 
 **In callbacks, always use `getState()`** to avoid stale closures:
+
 ```typescript
 const handleSave = () => {
   const { selectedNote } = useNotesStore.getState()
@@ -77,8 +79,8 @@ const handleSave = () => {
 ```typescript
 import { usePreferences, useSavePreferences } from '@/services/preferences'
 
-const { data: prefs } = usePreferences()        // loads from Rust backend
-const { mutate: save } = useSavePreferences()   // persists via Rust backend
+const { data: prefs } = usePreferences() // loads from Rust backend
+const { mutate: save } = useSavePreferences() // persists via Rust backend
 ```
 
 Desktop-specific query config: `refetchOnWindowFocus: false`, 1 retry, 5 min stale.
@@ -95,6 +97,7 @@ if (result.status === 'error') console.error(result.error)
 ```
 
 Listening to Rust events:
+
 ```typescript
 import { listen } from '@tauri-apps/api/event'
 
@@ -138,13 +141,18 @@ interface Note {
   createdAt: Date
   updatedAt: Date
   transcription: string
-  soap: { subjective: string; objective: string; assessment: string; plan: string }
+  soap: {
+    subjective: string
+    objective: string
+    assessment: string
+    plan: string
+  }
 }
 
 // src/types/templates.ts
 interface Template {
   id: string
-  isSystem: boolean       // system templates are read-only
+  isSystem: boolean // system templates are read-only
   title: string
   description: string
   generalInstructions: string
@@ -157,6 +165,7 @@ interface Template {
 ## Layout
 
 Three-column resizable layout (`MainWindow`):
+
 ```
 TitleBar
 ResizablePanelGroup

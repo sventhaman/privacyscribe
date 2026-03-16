@@ -106,5 +106,16 @@
   "toast.error.windowMinimizeFailed": "فشل تصغير النافذة: {{message}}",
   "toast.error.windowMaximizeFailed": "فشل تبديل التكبير: {{message}}",
   "toast.error.fullscreenEnterFailed": "فشل الدخول إلى ملء الشاشة: {{message}}",
-  "toast.error.fullscreenExitFailed": "فشل الخروج من ملء الشاشة: {{message}}"
+  "toast.error.fullscreenExitFailed": "فشل الخروج من ملء الشاشة: {{message}}",
+
+  "llm.generateNote": "إنشاء ملاحظة",
+  "llm.generating": "جارٍ الإنشاء...",
+  "llm.templateLabel": "القالب",
+  "llm.modelRequired": "نموذج الذكاء الاصطناعي مطلوب",
+  "llm.modelDownloadTitle": "تحميل نموذج الذكاء الاصطناعي",
+  "llm.modelDownloadDescription": "يجب تحميل نموذج الذكاء الاصطناعي (~5.5 جيجا) مرة واحدة.",
+  "llm.modelDownloadButton": "تحميل",
+  "llm.errorParsing": "فشل إنشاء الملاحظة — يرجى المحاولة مرة أخرى.",
+  "llm.errorGenerating": "فشل إنشاء الملاحظة",
+  "llm.alreadyGenerating": "إنشاء الملاحظة قيد التقدم بالفعل"
 }

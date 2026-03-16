@@ -10,9 +10,16 @@ export interface SoapNote {
   plan: string
 }
 
+export interface NoteSection {
+  title: string
+  content: string
+}
+
 export interface Note {
   id: string
   title: string
+  templateId: string | null
+  sections: NoteSection[]
   createdAt: Date
   updatedAt: Date
   transcription: string
@@ -33,6 +40,9 @@ interface NotesState {
   createNote: () => Promise<void>
   updateTitle: (id: string, title: string) => void
   updateSoap: (id: string, field: keyof SoapNote, value: string) => void
+  updateSection: (id: string, title: string, content: string) => void
+  setSections: (id: string, sections: NoteSection[]) => void
+  setNoteTemplate: (id: string, templateId: string) => void
   updateTranscription: (id: string, value: string) => void
   deleteNote: (id: string) => Promise<void>
   setActiveTab: (tab: NoteTab) => void
@@ -40,9 +50,20 @@ interface NotesState {
 }
 
 function rowToNote(row: NoteRow): Note {
+  let sections: NoteSection[] = []
+  if (row.sections) {
+    try {
+      sections = JSON.parse(row.sections)
+    } catch {
+      // Corrupted JSON — fall back to empty sections
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
+    templateId: row.template_id ?? null,
+    sections,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     transcription: row.transcription,
@@ -80,8 +101,10 @@ function scheduleSave(note: Note, delayMs = 500) {
                   assessment    = $4,
                   plan          = $5,
                   transcription = $6,
-                  updated_at    = $7
-            WHERE id = $8`,
+                  template_id   = $7,
+                  sections      = $8,
+                  updated_at    = $9
+            WHERE id = $10`,
           [
             note.title,
             note.soap.subjective,
@@ -89,6 +112,8 @@ function scheduleSave(note: Note, delayMs = 500) {
             note.soap.assessment,
             note.soap.plan,
             note.transcription,
+            note.templateId,
+            JSON.stringify(note.sections),
             note.updatedAt.getTime(),
             note.id,
           ]
@@ -156,6 +181,8 @@ export const useNotesStore = create<NotesState>()(
         const newNote: Note = {
           id,
           title: '',
+          templateId: null,
+          sections: [],
           createdAt: new Date(now),
           updatedAt: new Date(now),
           transcription: '',
@@ -206,6 +233,63 @@ export const useNotesStore = create<NotesState>()(
           },
           undefined,
           'updateSoap'
+        )
+      },
+
+      updateSection: (id: string, title: string, content: string) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id
+                ? {
+                    ...note,
+                    updatedAt: new Date(),
+                    sections: note.sections.map(s =>
+                      s.title === title ? { ...s, content } : s
+                    ),
+                  }
+                : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'updateSection'
+        )
+      },
+
+      setSections: (id: string, sections: NoteSection[]) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id
+                ? { ...note, updatedAt: new Date(), sections }
+                : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'setSections'
+        )
+      },
+
+      setNoteTemplate: (id: string, templateId: string) => {
+        set(
+          state => {
+            const notes = state.notes.map(note =>
+              note.id === id
+                ? { ...note, updatedAt: new Date(), templateId }
+                : note
+            )
+            const updated = notes.find(n => n.id === id)
+            if (updated) scheduleSave(updated)
+            return { notes }
+          },
+          undefined,
+          'setNoteTemplate'
         )
       },
 

@@ -106,5 +106,16 @@
   "toast.error.windowMinimizeFailed": "Échec de la réduction de la fenêtre : {{message}}",
   "toast.error.windowMaximizeFailed": "Échec du basculement de l'agrandissement : {{message}}",
   "toast.error.fullscreenEnterFailed": "Échec du passage en plein écran : {{message}}",
-  "toast.error.fullscreenExitFailed": "Échec de la sortie du plein écran : {{message}}"
+  "toast.error.fullscreenExitFailed": "Échec de la sortie du plein écran : {{message}}",
+
+  "llm.generateNote": "Générer la note",
+  "llm.generating": "Génération...",
+  "llm.templateLabel": "Modèle",
+  "llm.modelRequired": "Modèle IA requis",
+  "llm.modelDownloadTitle": "Télécharger le modèle IA",
+  "llm.modelDownloadDescription": "Le modèle IA (~5,5 Go) doit être téléchargé une fois.",
+  "llm.modelDownloadButton": "Télécharger",
+  "llm.errorParsing": "Échec de la génération — veuillez réessayer.",
+  "llm.errorGenerating": "Échec de la génération de la note",
+  "llm.alreadyGenerating": "La génération de la note est déjà en cours"
 }

@@ -142,6 +142,80 @@ async updateQuickPaneShortcut(shortcut: string | null) : Promise<Result<null, st
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Start recording from the default microphone.
+ * Spawns a dedicated thread that creates and owns the cpal::Stream.
+ */
+async startRecording() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_recording") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stop recording, resample to 16kHz mono WAV, and return the file path.
+ */
+async stopRecording() : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_recording") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Transcribe a 16kHz mono WAV file and delete it immediately after.
+ * `language` is an optional ISO 639-1 code (e.g. "en", "no", "de").
+ * Pass `None` to auto-detect the language from the audio.
+ * Returns the transcribed text.
+ */
+async transcribeAndDelete(filePath: string, language: string | null) : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("transcribe_and_delete", { filePath, language }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Check whether the LLM model file exists locally and is valid.
+ */
+async checkLlmModel() : Promise<Result<boolean, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_llm_model") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Download the LLM model from HuggingFace if it doesn't exist locally.
+ * Emits `llm-model-download-progress` events with `{ percent: number }`.
+ */
+async downloadLlmModel() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("download_llm_model") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Generate a structured clinical note from a system prompt and user content.
+ * 
+ * Streams tokens via `llm-chunk` events. Emits `llm-done` on completion
+ * or `llm-error` on failure. Uses GBNF grammar to force valid JSON output.
+ */
+async generateNoteStream(systemPrompt: string, userContent: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("generate_note_stream", { systemPrompt, userContent }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

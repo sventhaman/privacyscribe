@@ -38,6 +38,7 @@ src-tauri/src/          # Rust backend
 ```
 
 **Key data flow:**
+
 1. User records audio → `start_recording` / `stop_recording` commands
 2. Audio transcribed locally → `transcribe_and_delete` (Whisper, deletes audio file immediately)
 3. Transcription + template → `generate_note_stream` (Llama 3.1 8B, streams tokens via events)
@@ -45,17 +46,17 @@ src-tauri/src/          # Rust backend
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/lib/tauri-bindings.ts` | Type-safe Rust command wrappers (auto-generated) |
-| `src/lib/db.ts` | SQLite init, schema, migrations, row types |
-| `src/store/notes-store.ts` | Notes CRUD + debounced SQLite saves |
-| `src/store/templates-store.ts` | SOAP template management |
-| `src/store/ui-store.ts` | Sidebar/modal visibility |
-| `src-tauri/src/commands/llm.rs` | Local Llama inference with token streaming |
-| `src-tauri/src/commands/transcription.rs` | Whisper transcription + HIPAA audio deletion |
-| `src-tauri/src/commands/audio.rs` | cpal audio recording → 16kHz WAV |
-| `src-tauri/src/commands/quick_pane.rs` | Floating NSPanel window |
+| File                                      | Purpose                                          |
+| ----------------------------------------- | ------------------------------------------------ |
+| `src/lib/tauri-bindings.ts`               | Type-safe Rust command wrappers (auto-generated) |
+| `src/lib/db.ts`                           | SQLite init, schema, migrations, row types       |
+| `src/store/notes-store.ts`                | Notes CRUD + debounced SQLite saves              |
+| `src/store/templates-store.ts`            | SOAP template management                         |
+| `src/store/ui-store.ts`                   | Sidebar/modal visibility                         |
+| `src-tauri/src/commands/llm.rs`           | Local Llama inference with token streaming       |
+| `src-tauri/src/commands/transcription.rs` | Whisper transcription + HIPAA audio deletion     |
+| `src-tauri/src/commands/audio.rs`         | cpal audio recording → 16kHz WAV                 |
+| `src-tauri/src/commands/quick_pane.rs`    | Floating NSPanel window                          |
 
 ## Domain-Specific Guides
 

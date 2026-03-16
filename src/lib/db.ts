@@ -48,6 +48,15 @@ export async function initDb(): Promise<void> {
     // Column already exists — safe to ignore on subsequent starts
   }
 
+  // Migration: add sections JSON column for dynamic LLM-generated note sections
+  try {
+    await db.execute(
+      `ALTER TABLE notes ADD COLUMN sections TEXT NOT NULL DEFAULT ''`
+    )
+  } catch {
+    // Column already exists — safe to ignore on subsequent starts
+  }
+
   await db.execute(`
     CREATE TABLE IF NOT EXISTS templates (
       id                   TEXT PRIMARY KEY NOT NULL,
@@ -130,37 +139,15 @@ const SYSTEM_TEMPLATES: SystemTemplateDefinition[] = [
 - Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- Include ONLY the following objective findings during THE PRESENT consultation: vital signs (with units), physical examinations and paraclinical test results.
-- Begin with all observed vital signs on one line and follow with other findings.
-- Document the physical examination findings following the 'Look, Feel, Move' sequence.
-- Use only medical terminology and professional terms.
-- Include both positive and negative findings.
+- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
+- Document in order: vitals first (on one line), then exam findings, then test results.
+- Use medical terminology. Include both positive and negative findings.
 - List with new lines but not with bullets or hyphens.
-- Keywords to use for physical examinations if made: BP:, SpO2:, Pupils:, Oral Cavity:, Neck:, Heart:, Lungs:, Spine:, Abdomen:, Rectal Exam:, External Genitalia (Men):, Pelvic Exam:, Extremities:, Orientational Neurology:, Otoscopy:
-- Only document examination findings that are explicitly described in the transcript. Do NOT use standard phrases for examinations that were merely mentioned but not actually performed or described.
-- The standard phrases below are ONLY to be used when the clinician has explicitly documented the examination findings in detail. If an examination is mentioned but no findings are described, omit it entirely from this section.
-<standard_phrases_on_normal_findings>
-General: Good, well-oriented, cooperative.
-Vitals: BP xxx/xx mmHg, pulse xx/min regular, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg
-Pupils: Round and equal, normal reaction to light.
-Oral Cavity: Own teeth. Pale, moist, and clean mucous membranes.
-Neck: No swollen/tender lymph nodes. Thyroid gland not palpably enlarged.
-Spine: No pain, stiffness, or asymmetry.
-Heart: Pure tones, regular rate, no murmurs. Preserved 2nd heart sound.
-Lungs: Normal breath sounds, no adventitious sounds. Normal lung borders.
-Abdomen: Soft and non-tender. No rebound or palpation tenderness. Liver or spleen not palpable. No palpable masses. No costovertebral angle tenderness.
-Rectal Exam: Normal sphincter tone. No masses. (Men: Prostate normal size, well-defined, smooth surface, and firm elastic consistency. Preserved median sulcus.) / (Women: Uterus palpated non-tender.)
-External Genitalia (Men): Unremarkable scrotum and testes.
-Pelvic Exam: Vulva, vagina, and cervix unremarkable. Free adnexa. Uterus non-tender to movement. Normal discharge/blood (if menstruating). No noticeable odor.
-Extremities: No edema. Warm and dry skin. Good pulse in a. dorsalis pedis bilaterally. Normal capillary refill.
-Orientational Neurology: Round, equal pupils with symmetrical reaction to light. No visible facial asymmetry. H-test without nystagmus or diplopia. Normal movement of all extremities. Equal grip strength in hands.
-Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with distinct landmarks and good mobility.
-</standard_phrases_on_normal_findings>
-- Format:
-    - Vitals (Strict Order): \`BP xxx/xx mmHg, pulse xx/min, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg\`
-    - Exams: \`System: Description\`
-    - Paraclinical test results from the current visit: \`Test: Result\`
-- Write ONE SINGLE whitespace with no quotes around if no examination/test results from THIS visit.
+- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
+- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
+- Test format: \`Test: Result\` — only results explicitly mentioned.
+- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
+- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -203,37 +190,15 @@ Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with dis
 - Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- Include ONLY objective findings from THE PRESENT consultation: vital signs (with units), physical examinations and paraclinical test results.
-- Begin with all observed vital signs on one line and follow with other findings.
-- Document the physical examination findings following the 'Look, Feel, Move' sequence.
-- Use only medical terminology and professional terms.
-- Include both positive and negative findings.
+- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
+- Document in order: vitals first (on one line), then exam findings, then test results.
+- Use medical terminology. Include both positive and negative findings.
 - List with new lines but not with bullets or hyphens.
-- Keywords to use for physical examinations if made: BP:, SpO2:, Pupils:, Oral Cavity:, Neck:, Heart:, Lungs:, Spine:, Abdomen:, Rectal Exam:, External Genitalia (Men):, Pelvic Exam:, Extremities:, Orientational Neurology:, Otoscopy:
-- Only document examination findings that are explicitly described in the transcript. Do NOT use standard phrases for examinations that were merely mentioned but not actually performed or described.
-- The standard phrases below are ONLY to be used when the clinician has explicitly documented the examination findings in detail. If an examination is mentioned but no findings are described, omit it entirely from this section.
-<standard_phrases_on_normal_findings>
-General: Good, well-oriented, cooperative.
-Vitals: BP xxx/xx mmHg, pulse xx/min regular, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg
-Pupils: Round and equal, normal reaction to light.
-Oral Cavity: Own teeth. Pale, moist, and clean mucous membranes.
-Neck: No swollen/tender lymph nodes. Thyroid gland not palpably enlarged.
-Spine: No pain, stiffness, or asymmetry.
-Heart: Pure tones, regular rate, no murmurs. Preserved 2nd heart sound.
-Lungs: Normal breath sounds, no adventitious sounds. Normal lung borders.
-Abdomen: Soft and non-tender. No rebound or palpation tenderness. Liver or spleen not palpable. No palpable masses. No costovertebral angle tenderness.
-Rectal Exam: Normal sphincter tone. No masses. (Men: Prostate normal size, well-defined, smooth surface, and firm elastic consistency. Preserved median sulcus.) / (Women: Uterus palpated non-tender.)
-External Genitalia (Men): Unremarkable scrotum and testes.
-Pelvic Exam: Vulva, vagina, and cervix unremarkable. Free adnexa. Uterus non-tender to movement. Normal discharge/blood (if menstruating). No noticeable odor.
-Extremities: No edema. Warm and dry skin. Good pulse in a. dorsalis pedis bilaterally. Normal capillary refill.
-Orientational Neurology: Round, equal pupils with symmetrical reaction to light. No visible facial asymmetry. H-test without nystagmus or diplopia. Normal movement of all extremities. Equal grip strength in hands.
-Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with distinct landmarks and good mobility.
-</standard_phrases_on_normal_findings>
-- Format:
-    - Vitals (Strict Order): \`BP xxx/xx mmHg, pulse xx/min, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg\`
-    - Exams: \`System: Description\`
-    - Paraclinical test results from the current visit: \`Test: Result\`
-- Write ONE SINGLE whitespace with no quotes around if no examination/test results from THIS visit.
+- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
+- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
+- Test format: \`Test: Result\` — only results explicitly mentioned.
+- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
+- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Maximum 1-2 short lines per problem. State diagnosis/differential only — no reasoning, no repetition from earlier sections.
@@ -277,38 +242,16 @@ Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with dis
 - Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- Include ONLY the following objective findings during THE PRESENT consultation: vital signs (with units), physical examinations and paraclinical test results.
-- Begin with all observed vital signs on one line and follow with other findings.
-- Document the physical examination findings following the 'Look, Feel, Move' sequence.
-- Use only medical terminology and professional terms.
-- Include both positive and negative findings.
+- ⛔ ONLY include findings that were explicitly stated aloud in the transcript. If no vitals, exam, or test results were mentioned, write a single space and nothing else.
+- Document in order: vitals first (on one line), then exam findings, then test results.
+- Use medical terminology. Include both positive and negative findings.
 - List with new lines but not with bullets or hyphens.
-- Keywords to use for physical examinations if made: BP:, SpO2:, Pupils:, Oral Cavity:, Neck:, Heart:, Lungs:, Spine:, Abdomen:, Rectal Exam:, External Genitalia (Men):, Pelvic Exam:, Extremities:, Orientational Neurology:, Otoscopy:
-- Only document examination findings that are explicitly described in the transcript. Do NOT use standard phrases for examinations that were merely mentioned but not actually performed or described.
-- The standard phrases below are ONLY to be used when the clinician has explicitly documented the examination findings in detail. If an examination is mentioned but no findings are described, omit it entirely from this section.
-<standard_phrases_on_normal_findings>
-General: Good, well-oriented, cooperative.
-Vitals: BP xxx/xx mmHg, pulse xx/min regular, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg
-Pupils: Round and equal, normal reaction to light.
-Oral Cavity: Own teeth. Pale, moist, and clean mucous membranes.
-Neck: No swollen/tender lymph nodes. Thyroid gland not palpably enlarged.
-Spine: No pain, stiffness, or asymmetry.
-Heart: Pure tones, regular rate, no murmurs. Preserved 2nd heart sound.
-Lungs: Normal breath sounds, no adventitious sounds. Normal lung borders.
-Abdomen: Soft and non-tender. No rebound or palpation tenderness. Liver or spleen not palpable. No palpable masses. No costovertebral angle tenderness.
-Rectal Exam: Normal sphincter tone. No masses. (Men: Prostate normal size, well-defined, smooth surface, and firm elastic consistency. Preserved median sulcus.) / (Women: Uterus palpated non-tender.)
-External Genitalia (Men): Unremarkable scrotum and testes.
-Pelvic Exam: Vulva, vagina, and cervix unremarkable. Free adnexa. Uterus non-tender to movement. Normal discharge/blood (if menstruating). No noticeable odor.
-Extremities: No edema. Warm and dry skin. Good pulse in a. dorsalis pedis bilaterally. Normal capillary refill.
-Orientational Neurology: Round, equal pupils with symmetrical reaction to light. No visible facial asymmetry. H-test without nystagmus or diplopia. Normal movement of all extremities. Equal grip strength in hands.
-Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with distinct landmarks and good mobility.
-</standard_phrases_on_normal_findings>
-- Format:
-    - Vitals (Strict Order): \`BP xxx/xx mmHg, pulse xx/min, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg\`
-    - Exams: \`System: Description\`
-    - Paraclinical test results from the current visit: \`Test: Result\`
+- Vitals format: list only the parameters actually stated, using standard units (mmHg, /min, °C, %).
+- Exam format: \`System: Description\` — only systems the clinician explicitly examined or described.
+- Test format: \`Test: Result\` — only results explicitly mentioned.
+- ⛔ DO NOT invent, assume, or fill in values that were not spoken. DO NOT use typical or normal values as defaults.
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no examination/test results from THIS visit.
+- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -365,42 +308,20 @@ Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with dis
 - Write ONE SINGLE whitespace with no quotes around as the only text if the section contains no relevant information.
 
 ## Objective
-- Include ONLY the following objective findings during THE PRESENT consultation: vital signs (with units), physical examinations, paraclinical test results, and mental status examination.
-- Begin with all observed vital signs on one line and follow with other findings.
-- Document the physical examination findings following the 'Look, Feel, Move' sequence.
-- Write a single flowing paragraph for mental status examination (if performed). Only include domains that were explicitly assessed or described in the transcript.
-- List any psychiatric rating scales or screening tool results (e.g., PHQ-9, GAD-7, MADRS, AUDIT) as separate lines with score and interpretation if stated.
-- Use only medical terminology and professional terms.
-- Include both positive and negative findings.
+- Include ONLY vital signs, physical examination findings, paraclinical test results, and mental status examination that were explicitly stated in the transcript during THIS consultation.
+- Document in order: vitals first (one line), then mental status exam paragraph, then screening tool results, then other exam findings.
+- Use medical terminology. Include both positive and negative findings.
 - List with new lines but not with bullets or hyphens.
-- Only document examination findings that are explicitly described in the transcript. Do NOT use standard phrases for examinations that were merely mentioned but not actually performed or described.
-- The standard phrases below are ONLY to be used when the clinician has explicitly documented the examination findings in detail. If an examination is mentioned but no findings are described, omit it entirely from this section.
-<standard_phrases_on_normal_findings>
-General: Good, well-oriented, cooperative.
-Vitals: BP xxx/xx mmHg, pulse xx/min regular, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg
-Mental Status: Adequately dressed and groomed. Awake, clear, and oriented to time, place, and situation. Adequate eye contact. Normal psychomotor tempo. Mood described as [X], with [congruent/incongruent] affect. Normal speech fluency and volume. Coherent and goal-directed thought process. No delusions or hallucinatory experiences. No suicidal or homicidal ideations. Satisfactory insight and judgment.
-Pupils: Round and equal, normal reaction to light.
-Oral Cavity: Own teeth. Pale, moist, and clean mucous membranes.
-Neck: No swollen/tender lymph nodes. Thyroid gland not palpably enlarged.
-Spine: No pain, stiffness, or asymmetry.
-Heart: Pure tones, regular rate, no murmurs. Preserved 2nd heart sound.
-Lungs: Normal breath sounds, no adventitious sounds. Normal lung borders.
-Abdomen: Soft and non-tender. No rebound or palpation tenderness. Liver or spleen not palpable. No palpable masses. No costovertebral angle tenderness.
-Rectal Exam: Normal sphincter tone. No masses. (Men: Prostate normal size, well-defined, smooth surface, and firm elastic consistency. Preserved median sulcus.) / (Women: Uterus palpated non-tender.)
-External Genitalia (Men): Unremarkable scrotum and testes.
-Pelvic Exam: Vulva, vagina, and cervix unremarkable. Free adnexa. Uterus non-tender to movement. Normal discharge/blood (if menstruating). No noticeable odor.
-Extremities: No edema. Warm and dry skin. Good pulse in a. dorsalis pedis bilaterally. Normal capillary refill.
-Orientational Neurology: Round, equal pupils with symmetrical reaction to light. No visible facial asymmetry. H-test without nystagmus or diplopia. Normal movement of all extremities. Equal grip strength in hands.
-Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with distinct landmarks and good mobility.
-</standard_phrases_on_normal_findings>
+- Only include mental status domains that were explicitly assessed or described in the transcript.
 - Format:
-    - Vitals (Strict Order): \`BP xxx/xx mmHg, pulse xx/min, resp xx/min, temp xx.x°C, SpO2 xx%, height xx cm, weight xx kg\`
+    - Vitals: list only the parameters actually stated, using standard units (mmHg, /min, °C, %). Only include what was explicitly measured and spoken.
     - Mental status: \`Mental Status: [flowing paragraph]\`
     - Screening tools: \`[Tool]: [Score] — [interpretation if stated]\`
     - Exams: \`System: Description\`
     - Paraclinical test results from the current visit: \`Test: Result\`
+- ⛔ DO NOT copy standard phrases or invent typical values. Write ONLY what was explicitly said in the transcript.
 - NEVER use bold markdown (**...**) formatting.
-- Write ONE SINGLE whitespace with no quotes around if no examination/test results from THIS visit.
+- Write ONE SINGLE whitespace with no quotes around if no objective findings were documented.
 
 ## Assessment
 - Content: Document the clinician's clinically significant assessments, diagnoses, or differential diagnoses explicitly stated in the transcript as short as possible.
@@ -435,33 +356,32 @@ Otoscopy: Normal conditions in the ear canal, tympanic membrane is pale with dis
 ]
 
 async function seedSystemTemplates(db: Database): Promise<void> {
-  const [result] = await db.select<[{ count: number }]>(
-    'SELECT COUNT(*) as count FROM templates WHERE is_system = 1'
-  )
-  if (result.count > 0) return
-
   const now = Date.now()
 
   for (const tmpl of SYSTEM_TEMPLATES) {
     const sections = parsePromptToSections(tmpl.prompt)
-    await db.execute(
-      `INSERT INTO templates
-         (id, is_system, title, description, general_instructions, sections, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        tmpl.id,
-        1,
-        tmpl.title,
-        tmpl.description,
-        '',
-        JSON.stringify(sections),
-        now,
-        now,
-      ]
+    const sectionsJson = JSON.stringify(sections)
+
+    // Try UPDATE first — preserves created_at and avoids section UUID churn
+    const result = await db.execute(
+      `UPDATE templates
+          SET title = $1, description = $2, sections = $3, updated_at = $4
+        WHERE id = $5 AND is_system = 1`,
+      [tmpl.title, tmpl.description, sectionsJson, now, tmpl.id]
     )
+
+    // INSERT if row didn't exist yet (first install)
+    if (result.rowsAffected === 0) {
+      await db.execute(
+        `INSERT INTO templates
+           (id, is_system, title, description, general_instructions, sections, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [tmpl.id, 1, tmpl.title, tmpl.description, '', sectionsJson, now, now]
+      )
+    }
   }
 
-  logger.info(`Seeded ${SYSTEM_TEMPLATES.length} system templates`)
+  logger.info(`Upserted ${SYSTEM_TEMPLATES.length} system templates`)
 }
 
 // ---------------------------------------------------------------------------
@@ -481,6 +401,7 @@ export interface NoteRow {
   plan: string
   transcription: string
   template_id: string | null
+  sections: string
   created_at: number
   updated_at: number
 }

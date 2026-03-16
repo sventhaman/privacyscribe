@@ -188,5 +188,16 @@
   "toast.error.windowMinimizeFailed": "Failed to minimize window: {{message}}",
   "toast.error.windowMaximizeFailed": "Failed to toggle maximize: {{message}}",
   "toast.error.fullscreenEnterFailed": "Failed to enter fullscreen: {{message}}",
-  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}"
+  "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}",
+
+  "llm.generateNote": "Generate Note",
+  "llm.generating": "Generating...",
+  "llm.templateLabel": "Template",
+  "llm.modelRequired": "AI model required",
+  "llm.modelDownloadTitle": "Download AI Model",
+  "llm.modelDownloadDescription": "The AI note model (~5.5 GB) needs to be downloaded once.",
+  "llm.modelDownloadButton": "Download",
+  "llm.errorParsing": "Failed to generate note — please try again.",
+  "llm.errorGenerating": "Note generation failed",
+  "llm.alreadyGenerating": "Note generation is already in progress"
 }

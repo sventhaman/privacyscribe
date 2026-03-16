@@ -40,10 +40,11 @@ cpal = "0.15"
 hound = "3.5"
 rubato = "0.16"
 
-# AI transcription (whisper.cpp via Rust bindings)
+# AI transcription (whisper.cpp) & LLM inference (llama.cpp)
 reqwest = { version = "0.12", features = ["stream"] }
 futures-util = "0.3"
 tokio = { version = "1", features = ["fs"] }
+encoding_rs = "0.8"
 
 # Type-safe Tauri command bindings
 specta = { version = "=2.0.0-rc.22", features = ["derive", "serde_json"] }
@@ -61,9 +62,11 @@ tauri-plugin-window-state = "2"
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v2.1" }
 whisper-rs = { version = "0.15", features = ["metal"] }
+llama-cpp-2 = { version = ">=0.1.136", features = ["metal"] }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 whisper-rs = "0.15"
+llama-cpp-2 = ">=0.1.136"
 
 # Optimize for smaller binary size in release builds
 [profile.release]

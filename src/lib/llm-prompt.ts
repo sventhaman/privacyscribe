@@ -1,11 +1,23 @@
 import type { Template } from '@/types/templates'
 
+export interface LLMPrompt {
+  system: string
+  user: string
+}
+
 /**
- * Compiles a template's general instructions and per-section instructions
- * with a raw transcript into a single system prompt for the LLM.
+ * Compiles a template's instructions and a raw transcript into
+ * separate system and user prompts for the LLM.
+ *
+ * The system prompt establishes the medical scribe role, output format
+ * (JSON matching LLMNoteOutput), and section instructions.
+ * The user prompt contains the transcript only.
  */
-export function buildLLMPrompt(transcript: string, template: Template): string {
-  const sectionInstructions = template.sections
+export function buildLLMPrompt(
+  transcript: string,
+  template: Template
+): LLMPrompt {
+  const sectionList = template.sections
     .map(s => {
       const lines = [`## ${s.title}`]
       if (s.style !== 'Auto') lines.push(`Style: ${s.style}`)
@@ -16,18 +28,43 @@ export function buildLLMPrompt(transcript: string, template: Template): string {
     })
     .join('\n\n')
 
-  const parts: string[] = []
+  const systemParts = [
+    'You are an expert medical scribe. Convert the transcript into a structured clinical note.',
+    '',
+    'RULES:',
+    '- Be concise and clinically precise.',
+    '- Use standard medical abbreviations (BP, HR, RX, PMHx, etc.).',
+    '- Never invent information not present in the transcript.',
+    '- If a section has no relevant information, write a single whitespace as its content.',
+    '- Output ONLY valid JSON — no markdown, no preamble, no explanation.',
+    '',
+    'OUTPUT FORMAT (strict JSON):',
+    '{"title":"<visit title, max 6 words>","sections":[{"title":"<section name>","content":"<clinical content>"}]}',
+    '',
+    'REQUIRED SECTIONS (generate exactly these, in this order):',
+    sectionList,
+  ]
 
   if (template.generalInstructions.trim()) {
-    parts.push(template.generalInstructions.trim())
+    systemParts.push('')
+    systemParts.push('ADDITIONAL INSTRUCTIONS:')
+    systemParts.push(template.generalInstructions.trim())
   }
 
-  parts.push(
-    'Below is a raw medical visit transcript. Generate a structured clinical note with the following sections:'
+  // Final rule appended last — recency bias helps small models weight this heavily
+  systemParts.push('')
+  systemParts.push(
+    '⛔ FINAL RULE: Every word you write must come directly from the transcript.'
   )
-  parts.push(sectionInstructions)
-  parts.push('---\nTRANSCRIPT:')
-  parts.push(transcript.trim())
+  systemParts.push(
+    'If a section has no transcript evidence, its content MUST be exactly one space character " ".'
+  )
+  systemParts.push(
+    'Do NOT use medical defaults, assumptions, or fill-in phrases. Transcribe only — never invent.'
+  )
 
-  return parts.join('\n\n')
+  return {
+    system: systemParts.join('\n'),
+    user: `TRANSCRIPT:\n${transcript.trim()}`,
+  }
 }

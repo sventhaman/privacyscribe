@@ -1,7 +1,9 @@
 use tauri_specta::{collect_commands, Builder};
 
 pub fn generate_bindings() -> Builder<tauri::Wry> {
-    use crate::commands::{audio, notifications, preferences, quick_pane, recovery, transcription};
+    use crate::commands::{
+        audio, llm, notifications, preferences, quick_pane, recovery, transcription,
+    };
 
     Builder::<tauri::Wry>::new().commands(collect_commands![
         preferences::greet,
@@ -19,6 +21,9 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         audio::start_recording,
         audio::stop_recording,
         transcription::transcribe_and_delete,
+        llm::check_llm_model,
+        llm::download_llm_model,
+        llm::generate_note_stream,
     ])
 }
 

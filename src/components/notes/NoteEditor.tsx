@@ -1,12 +1,30 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2, Clipboard, ClipboardCheck, Pencil } from 'lucide-react'
+import {
+  Trash2,
+  Clipboard,
+  ClipboardCheck,
+  Pencil,
+  Sparkles,
+  Loader2,
+} from 'lucide-react'
 import TextareaAutosize from 'react-textarea-autosize'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useNotesStore, type SoapNote, type NoteTab } from '@/store/notes-store'
+import { useTemplatesStore } from '@/store/templates-store'
 import { notifications } from '@/lib/notifications'
 import { AudioRecorder } from '@/components/notes/AudioRecorder'
+import { generateNote } from '@/lib/llm-service'
+import { commands } from '@/lib/tauri-bindings'
+import { listen } from '@tauri-apps/api/event'
 
 function formatHeaderDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
@@ -70,7 +88,12 @@ export function NoteEditor() {
   const deleteNote = useNotesStore(state => state.deleteNote)
   const setActiveTab = useNotesStore(state => state.setActiveTab)
 
+  const templates = useTemplatesStore(state => state.templates)
+
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadPercent, setDownloadPercent] = useState(0)
 
   const selectedNote = notes.find(n => n.id === selectedNoteId)
 
@@ -86,20 +109,113 @@ export function NoteEditor() {
     updateSoap(selectedNote.id, field, value)
   }
 
+  const handleSectionChange = (title: string, content: string) => {
+    const { updateSection } = useNotesStore.getState()
+    updateSection(selectedNote.id, title, content)
+  }
+
   const handleCopySoap = async () => {
-    const { subjective, objective, assessment, plan } = selectedNote.soap
-    const text = [
-      `Subjective:\n${subjective}`,
-      `Objective:\n${objective}`,
-      `Assessment:\n${assessment}`,
-      `Plan:\n${plan}`,
-    ]
-      .filter(section => section.split('\n')[1]?.trim())
-      .join('\n\n')
+    let text: string
+    if (selectedNote.sections.length > 0) {
+      text = selectedNote.sections
+        .filter(s => s.content.trim())
+        .map(s => `${s.title}:\n${s.content}`)
+        .join('\n\n')
+    } else {
+      const { subjective, objective, assessment, plan } = selectedNote.soap
+      text = [
+        `Subjective:\n${subjective}`,
+        `Objective:\n${objective}`,
+        `Assessment:\n${assessment}`,
+        `Plan:\n${plan}`,
+      ]
+        .filter(section => section.split('\n')[1]?.trim())
+        .join('\n\n')
+    }
     await navigator.clipboard.writeText(text)
     setCopyState('copied')
     setTimeout(() => setCopyState('idle'), 2000)
     notifications.success(t('notes.header.copiedLabel'))
+  }
+
+  const handleTemplateChange = (templateId: string) => {
+    const { setNoteTemplate } = useNotesStore.getState()
+    setNoteTemplate(selectedNote.id, templateId)
+  }
+
+  const handleGenerate = async () => {
+    if (isGenerating) return
+
+    // Find the template for this note
+    const template = templates.find(t => t.id === selectedNote.templateId)
+    if (!template) {
+      notifications.error(t('llm.templateLabel'))
+      return
+    }
+
+    if (!selectedNote.transcription.trim()) {
+      notifications.error(t('notes.transcription.placeholder'))
+      return
+    }
+
+    // Check model exists first
+    const checkResult = await commands.checkLlmModel()
+    if (checkResult.status === 'error') {
+      notifications.error(checkResult.error)
+      return
+    }
+    if (!checkResult.data) {
+      // Model not downloaded — start download
+      setIsDownloading(true)
+      setDownloadPercent(0)
+      const unlisten = await listen<{ percent: number }>(
+        'llm-model-download-progress',
+        e => {
+          setDownloadPercent(e.payload.percent)
+        }
+      )
+      try {
+        const downloadResult = await commands.downloadLlmModel()
+        if (downloadResult.status === 'error') {
+          notifications.error(downloadResult.error)
+          return
+        }
+      } finally {
+        unlisten()
+        setIsDownloading(false)
+      }
+    }
+
+    // Generate the note
+    setIsGenerating(true)
+    try {
+      const output = await generateNote(selectedNote, template)
+
+      // Write output sections to the note
+      const { setSections, updateTitle: setTitle } = useNotesStore.getState()
+      setSections(
+        selectedNote.id,
+        output.sections.map(s => ({
+          title: s.title,
+          content: s.content,
+        }))
+      )
+
+      // Auto-set title if empty
+      if (!selectedNote.title.trim() && output.title) {
+        setTitle(selectedNote.id, output.title)
+      }
+
+      // Switch to note tab to show the result
+      const { setActiveTab: switchTab } = useNotesStore.getState()
+      switchTab('note')
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : t('llm.errorGenerating')
+      notifications.error(message)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -142,26 +258,75 @@ export function NoteEditor() {
           </Button>
         </div>
 
-        {/* Row 2: date/time + tabs */}
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {formatHeaderDate(selectedNote.createdAt)},{' '}
-            {formatHeaderTime(selectedNote.createdAt)}
-          </span>
+        {/* Row 2: template + generate + date/time + tabs */}
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedNote.templateId ?? ''}
+              onValueChange={handleTemplateChange}
+            >
+              <SelectTrigger className="h-7 w-40 text-xs">
+                <SelectValue placeholder={t('llm.templateLabel')} />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map(tmpl => (
+                  <SelectItem key={tmpl.id} value={tmpl.id}>
+                    {tmpl.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={handleGenerate}
+              disabled={
+                isGenerating ||
+                isDownloading ||
+                !selectedNote.templateId ||
+                !selectedNote.transcription.trim()
+              }
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="size-3 animate-spin" />
+                  {downloadPercent}%
+                </>
+              ) : isGenerating ? (
+                <>
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('llm.generating')}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-3" />
+                  {t('llm.generateNote')}
+                </>
+              )}
+            </Button>
+          </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={val => setActiveTab(val as NoteTab)}
-          >
-            <TabsList className="h-7">
-              <TabsTrigger value="transcription" className="h-5 px-3 text-xs">
-                {t('notes.tab.transcription')}
-              </TabsTrigger>
-              <TabsTrigger value="note" className="h-5 px-3 text-xs">
-                {t('notes.tab.note')}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {formatHeaderDate(selectedNote.createdAt)},{' '}
+              {formatHeaderTime(selectedNote.createdAt)}
+            </span>
+
+            <Tabs
+              value={activeTab}
+              onValueChange={val => setActiveTab(val as NoteTab)}
+            >
+              <TabsList className="h-7">
+                <TabsTrigger value="transcription" className="h-5 px-3 text-xs">
+                  {t('notes.tab.transcription')}
+                </TabsTrigger>
+                <TabsTrigger value="note" className="h-5 px-3 text-xs">
+                  {t('notes.tab.note')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </div>
 
@@ -186,30 +351,37 @@ export function NoteEditor() {
           </div>
         ) : (
           <div className="pb-24">
-            <SoapSection
-              label={t('notes.soap.subjective')}
-              value={selectedNote.soap.subjective}
-              onChange={val => handleSoapChange('subjective', val)}
-              placeholder={t('notes.soap.subjectivePlaceholder')}
-            />
-            <SoapSection
-              label={t('notes.soap.objective')}
-              value={selectedNote.soap.objective}
-              onChange={val => handleSoapChange('objective', val)}
-              placeholder={t('notes.soap.objectivePlaceholder')}
-            />
-            <SoapSection
-              label={t('notes.soap.assessment')}
-              value={selectedNote.soap.assessment}
-              onChange={val => handleSoapChange('assessment', val)}
-              placeholder={t('notes.soap.assessmentPlaceholder')}
-            />
-            <SoapSection
-              label={t('notes.soap.plan')}
-              value={selectedNote.soap.plan}
-              onChange={val => handleSoapChange('plan', val)}
-              placeholder={t('notes.soap.planPlaceholder')}
-            />
+            {selectedNote.sections.length > 0
+              ? selectedNote.sections.map(s => (
+                  <SoapSection
+                    key={s.title}
+                    label={s.title}
+                    value={s.content}
+                    onChange={val => handleSectionChange(s.title, val)}
+                  />
+                ))
+              : (
+                  ['Subjective', 'Objective', 'Assessment', 'Plan'] as const
+                ).map(field => (
+                  <SoapSection
+                    key={field}
+                    label={t(
+                      `notes.soap.${field.toLowerCase() as 'subjective' | 'objective' | 'assessment' | 'plan'}`
+                    )}
+                    value={
+                      selectedNote.soap[field.toLowerCase() as keyof SoapNote]
+                    }
+                    onChange={val =>
+                      handleSoapChange(
+                        field.toLowerCase() as keyof SoapNote,
+                        val
+                      )
+                    }
+                    placeholder={t(
+                      `notes.soap.${field.toLowerCase() as 'subjective' | 'objective' | 'assessment' | 'plan'}Placeholder`
+                    )}
+                  />
+                ))}
           </div>
         )}
       </div>
