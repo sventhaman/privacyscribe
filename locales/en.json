@@ -190,6 +190,17 @@
   "toast.error.fullscreenEnterFailed": "Failed to enter fullscreen: {{message}}",
   "toast.error.fullscreenExitFailed": "Failed to exit fullscreen: {{message}}",
 
+  "preferences.transcription": "Transcription",
+  "preferences.transcription.models": "Transcription Models",
+  "preferences.transcription.modelsDescription": "Manage which AI models are downloaded for transcription. Language-specific models provide significantly better accuracy.",
+  "preferences.transcription.multilingual": "All languages",
+  "preferences.transcription.downloaded": "Downloaded",
+  "preferences.transcription.download": "Download",
+  "preferences.transcription.downloading": "Downloading... {{percent}}%",
+  "preferences.transcription.sizeLabel": "{{size}} MB",
+  "transcription.modelLabel": "Model",
+  "transcription.modelNotDownloaded": "Not downloaded — using Whisper large-v3-turbo as fallback",
+
   "llm.generateNote": "Generate Note",
   "llm.generating": "Generating...",
   "llm.templateLabel": "Template",

@@ -108,6 +108,17 @@
   "toast.error.fullscreenEnterFailed": "فشل الدخول إلى ملء الشاشة: {{message}}",
   "toast.error.fullscreenExitFailed": "فشل الخروج من ملء الشاشة: {{message}}",
 
+  "preferences.transcription": "النسخ",
+  "preferences.transcription.models": "نماذج النسخ",
+  "preferences.transcription.modelsDescription": "إدارة نماذج الذكاء الاصطناعي المُنزَّلة للنسخ. توفر النماذج الخاصة بلغة معينة دقة أفضل بكثير.",
+  "preferences.transcription.multilingual": "جميع اللغات",
+  "preferences.transcription.downloaded": "مُنزَّل",
+  "preferences.transcription.download": "تنزيل",
+  "preferences.transcription.downloading": "جارٍ التنزيل... {{percent}}%",
+  "preferences.transcription.sizeLabel": "{{size}} ميغابايت",
+  "transcription.modelLabel": "النموذج",
+  "transcription.modelNotDownloaded": "غير مُنزَّل — يُستخدم Whisper large-v3-turbo كبديل",
+
   "llm.generateNote": "إنشاء ملاحظة",
   "llm.generating": "جارٍ الإنشاء...",
   "llm.templateLabel": "القالب",

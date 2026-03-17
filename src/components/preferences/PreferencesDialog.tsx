@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Settings, Palette, Zap, FileText } from 'lucide-react'
+import { Settings, Palette, Zap, FileText, Mic } from 'lucide-react'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -30,8 +30,14 @@ import { GeneralPane } from './panes/GeneralPane'
 import { AppearancePane } from './panes/AppearancePane'
 import { AdvancedPane } from './panes/AdvancedPane'
 import { TemplatesPane } from './panes/TemplatesPane'
+import { TranscriptionPane } from './panes/TranscriptionPane'
 
-type PreferencePane = 'general' | 'appearance' | 'templates' | 'advanced'
+type PreferencePane =
+  | 'general'
+  | 'appearance'
+  | 'transcription'
+  | 'templates'
+  | 'advanced'
 
 const navigationItems = [
   {
@@ -43,6 +49,11 @@ const navigationItems = [
     id: 'appearance' as const,
     labelKey: 'preferences.appearance',
     icon: Palette,
+  },
+  {
+    id: 'transcription' as const,
+    labelKey: 'preferences.transcription',
+    icon: Mic,
   },
   {
     id: 'templates' as const,
@@ -126,6 +137,7 @@ export function PreferencesDialog() {
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0 max-h-[calc(600px-4rem)]">
               {activePane === 'general' && <GeneralPane />}
               {activePane === 'appearance' && <AppearancePane />}
+              {activePane === 'transcription' && <TranscriptionPane />}
               {activePane === 'templates' && <TemplatesPane />}
               {activePane === 'advanced' && <AdvancedPane />}
             </div>

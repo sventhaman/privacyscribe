@@ -20,6 +20,8 @@ pub fn generate_bindings() -> Builder<tauri::Wry> {
         quick_pane::update_quick_pane_shortcut,
         audio::start_recording,
         audio::stop_recording,
+        transcription::list_whisper_models,
+        transcription::download_whisper_model,
         transcription::transcribe_and_delete,
         llm::check_llm_model,
         llm::download_llm_model,

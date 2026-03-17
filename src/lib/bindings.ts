@@ -167,14 +167,38 @@ async stopRecording() : Promise<Result<string, string>> {
 }
 },
 /**
- * Transcribe a 16kHz mono WAV file and delete it immediately after.
- * `language` is an optional ISO 639-1 code (e.g. "en", "no", "de").
- * Pass `None` to auto-detect the language from the audio.
- * Returns the transcribed text.
+ * Return the model catalogue with `downloaded` status filled in.
  */
-async transcribeAndDelete(filePath: string, language: string | null) : Promise<Result<string, string>> {
+async listWhisperModels() : Promise<Result<WhisperModelInfo[], string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("transcribe_and_delete", { filePath, language }) };
+    return { status: "ok", data: await TAURI_INVOKE("list_whisper_models") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Download a model by id. Emits `whisper-model-download-progress` events:
+ * `{ "model_id": "...", "percent": 0..100 }`.
+ */
+async downloadWhisperModel(modelId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("download_whisper_model", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Transcribe a 16kHz mono WAV file and delete it immediately after.
+ * 
+ * `language` is an optional ISO 639-1 code (e.g. "en", "no").
+ * Pass `None` to auto-detect. `model_id` selects which model to use;
+ * if the model is not downloaded it falls back to `whisper-large-v3-turbo`.
+ */
+async transcribeAndDelete(filePath: string, language: string | null, modelId: string) : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("transcribe_and_delete", { filePath, language, modelId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -269,6 +293,22 @@ export type RecoveryError =
  * JSON serialization/deserialization error
  */
 { type: "ParseError"; message: string }
+/**
+ * Metadata for a downloadable Whisper model.
+ */
+export type WhisperModelInfo = { id: string; name: string; filename: string; url: string; 
+/**
+ * Approximate size in bytes (used for UI display only). u32 supports up to ~4 GB.
+ */
+size_bytes: number; 
+/**
+ * ISO 639-1 codes this model supports. Empty = all languages.
+ */
+languages: string[]; 
+/**
+ * Whether the model file is present on disk (set dynamically).
+ */
+downloaded: boolean }
 
 /** tauri-specta globals **/
 

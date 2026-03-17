@@ -108,6 +108,17 @@
   "toast.error.fullscreenEnterFailed": "Échec du passage en plein écran : {{message}}",
   "toast.error.fullscreenExitFailed": "Échec de la sortie du plein écran : {{message}}",
 
+  "preferences.transcription": "Transcription",
+  "preferences.transcription.models": "Modèles de transcription",
+  "preferences.transcription.modelsDescription": "Gérez les modèles d'IA téléchargés pour la transcription. Les modèles spécifiques à une langue offrent une bien meilleure précision.",
+  "preferences.transcription.multilingual": "Toutes les langues",
+  "preferences.transcription.downloaded": "Téléchargé",
+  "preferences.transcription.download": "Télécharger",
+  "preferences.transcription.downloading": "Téléchargement... {{percent}}%",
+  "preferences.transcription.sizeLabel": "{{size}} Mo",
+  "transcription.modelLabel": "Modèle",
+  "transcription.modelNotDownloaded": "Non téléchargé — utilisation de Whisper large-v3-turbo par défaut",
+
   "llm.generateNote": "Générer la note",
   "llm.generating": "Génération...",
   "llm.templateLabel": "Modèle",

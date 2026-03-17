@@ -22,7 +22,12 @@
  */
 
 export { commands, type Result } from './bindings'
-export type { AppPreferences, JsonValue, RecoveryError } from './bindings'
+export type {
+  AppPreferences,
+  JsonValue,
+  RecoveryError,
+  WhisperModelInfo,
+} from './bindings'
 
 /**
  * Helper to unwrap a Result type, throwing on error
